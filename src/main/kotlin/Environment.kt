@@ -11,7 +11,7 @@ package kf
 
 class Environment(val parent: Environment? = null) {
     /** The variables available in this environment. */
-    val vars: MutableMap<String, Any?> = mutableMapOf()
+    val vars: MutableMap<String, Any?> = HashMap()
 
     /** Look up a name: start here, then recursively up through parents. */
     fun at(key: String): Any? = vars[key] ?: parent?.at(key)
