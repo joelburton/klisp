@@ -12,6 +12,6 @@ package kf
 class Environment(val parent: Environment? = null) : HashMap<String, Any?>() {
     /** Look up a name: start here, then recursively up through parents. */
     override operator fun get(key: String): Any? =
-        super.get(key) ?: parent?.get(key)
+        super[key] ?: parent?.get(key)
     fun addFunc(name: String, func: Func) = put(name, func)
 }

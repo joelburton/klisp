@@ -13,14 +13,11 @@ class AST(val token: String, val children: MutableList<AST> = mutableListOf()) {
     override fun toString() = if (isAtom) token else children.toString()
     operator fun get(index: Int) = children[index]
 
-    /** Get token-as-double. Raise error if called on a non-number token. */
-    val asDouble get() = token.toDouble()
+    /** Get token-as-double. Returns null when called on a non-number token. */
+    val double get() = token.toDoubleOrNull()
 
-    /** Get token-as-bool. Raise error if called on a non-boolean token. */
-    val asBoolean
-        get() =
-            if (token == "true" || token == "false") token.toBoolean()
-            else throw IllegalArgumentException("Not boolean: $token")
+    /** Get token-as-bool. Returns null on a non-boolean token. */
+    val boolean get() = token.toBooleanStrictOrNull()
 
     /** An "atom" is an AST of a single value, like `1` or `foo` */
     val isAtom get() = children.isEmpty()

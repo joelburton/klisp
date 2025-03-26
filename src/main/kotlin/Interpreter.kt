@@ -10,13 +10,13 @@ typealias SpecialForm = (env: Environment, a: List<AST>) -> Any?
  * expression.
  */
 
-class Interpreter(val environment: Environment = Environment(null)) {
+class Interpreter(private val environment: Environment = Environment(null)) {
     /** Special forms are not evaluated; the author of them must evaluate them.
      *
      * This is what allows short-circuiting in logical expressions and is
      * what lambda and definitions use.
      */
-    val specialForms = mutableMapOf<String, SpecialForm>(
+    private val specialForms = mutableMapOf<String, SpecialForm>(
         "or" to { env, a -> a.any { eval(env, it) as Boolean } as Any },
         "and" to { env, a -> a.all { eval(env, it) as Boolean } as Any },
         "if" to { env, a ->
@@ -24,7 +24,7 @@ class Interpreter(val environment: Environment = Environment(null)) {
             else if (a.size > 2) eval(env, a[2]) else null
         },
         "define" to { env, a -> env[a[0].token] = eval(env, a[1]) },
-        "lambda" to { env, a -> lambda(env, a) } // ::lambda,
+        "lambda" to ::lambda,
     )
 
     /** Add these words to the top-level environment. */
@@ -40,13 +40,13 @@ class Interpreter(val environment: Environment = Environment(null)) {
     }
 
     /** Creates a lambda function. */
-    fun lambda(parent: Environment, lambda: List<AST>): Func {
+    private fun lambda(parent: Environment, lambda: List<AST>): Func {
         val names: AST = lambda[0]
         val body: AST = lambda[1]
-        return { args ->
+        return { a ->
             // Create an environment and add the lambda variables to it.
             val env = Environment(parent)
-            for (i in 0..<names.children.size) env[names[i].token] = args[i]
+            for (i in 0..<names.children.size) env[names[i].token] = a[i]
             // When a lambda is called, it evaluates itself: here, in fact
             eval(env, body)
         }
@@ -79,16 +79,6 @@ class Interpreter(val environment: Environment = Environment(null)) {
     }
 
     /** Evaluate, in order: a-number? a-bool? a-function? */
-    fun evalAtom(env: Environment, ast: AST): Any? {
-        return try {
-            ast.asDouble
-        } catch (_: NumberFormatException) {
-            try {
-                ast.asBoolean
-            } catch (_: IllegalArgumentException) {
-                // Check for the name in our environ (which recurses up)
-                env[ast.token]
-            }
-        }
-    }
+    private fun evalAtom(env: Environment, ast: AST): Any? =
+        ast.double ?: ast.boolean ?: env[ast.token]
 }
