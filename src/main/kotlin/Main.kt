@@ -1,45 +1,33 @@
-package kf
+package com.joelburton.klisp
 
 val parser = Parser()
-val interpreter = Interpreter()
+val interp = Interpreter()
 
-fun peval(s: String) = parser.parse(s).also { println(interpreter.eval(it)) }
+/** Print one or more s-exps and print the eval of the final one. */
+fun peval(vararg sexps: String) =
+    sexps.map { interp.eval(parser(it)) }.lastOrNull().also { println(it) }
 
 fun main() {
-    peval("(define one (lambda (a) a))")
-    peval("(one 2)")
-    peval("(define pi 3.14159)")
-    peval("pi")
-    peval("(* (+ 1 2) 4)")
-    peval("(or true false false true false)")
+    peval("(define pi 3.14159)", "pi")
+
     peval(
         """
-    (if 
-      (not 
-        (and
-          (= (+ 1 1) 2)
-          (= (* 1 1) 1)))
-      42)
-"""
+        (define nested 
+          (lambda (a b) 
+            (lambda (c) 
+              (* (+ a b) c))))          
+    """,
+        "((nested 3 4) 5)"
     )
+
     peval(
         """
-    (if 
-      (not 
-        (and
-          (= (+ 1 1) 2)
-          (= (* 1 1) 2)))
-      42)
-"""
+        (define factorial
+          (lambda (n)
+            (if (= n 1)
+              1
+              (* n (factorial (- n 1))))))
+    """,
+        "(factorial 5)"
     )
-    peval("(lambda (a b) (* (+ a b) b))")
-    peval(
-        """
-    (define nested 
-      (lambda (a b) 
-        (lambda (c) 
-          (* (+ a b) c))))          
-"""
-    )
-    peval("((nested 3 4) 5)")
 }

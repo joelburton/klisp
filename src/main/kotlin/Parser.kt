@@ -1,16 +1,15 @@
-package kf
+package com.joelburton.klisp
 
 import java.io.PushbackReader
 import java.io.StringReader
 
-class ParseError(message: String) : Exception(message)
-
-const val END_OF_STREAM = -1
+private class ParseError(message: String) : Exception(message)
+private const val END_OF_STREAM = -1
 
 /** A basic recursive descendant parser for LISP. */
 
 class Parser {
-    fun parse(input: String): AST {
+    operator fun invoke(input: String): AST {
         val reader = PushbackReader(StringReader(input))
 
         // Recursively parse the string and create the AST
@@ -69,7 +68,7 @@ class Parser {
         }
     }
 
-    /** Read next "atom" (a word) */
+    /** Read next "atom" (a non-paren token) */
     private fun nextAtom(reader: PushbackReader): String {
         val buffer = StringBuilder()
         while (true) {
