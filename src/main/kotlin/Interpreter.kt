@@ -75,7 +75,6 @@ class Interpreter(val environment: Environment = Environment(null)) {
         // a function --- so it needs to be coerced into that, and the compiler
         // needs to be lovingly reassured that this is ok.
         val func = eval(env, ast.head)
-        println(env.vars.keys)
         if (func == null) throw Exception("Unknown function: ${ast.head.token}")
         @Suppress("UNCHECKED_CAST")
         return (func as Func).invoke(ast.tail.map {
