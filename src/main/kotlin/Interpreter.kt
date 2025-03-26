@@ -23,23 +23,20 @@ class Interpreter(val environment: Environment = Environment(null)) {
             if (eval(env, a[0]) as Boolean) eval(env, a[1])
             else if (a.size > 2) eval(env, a[2]) else null
         },
-        "define" to { env, a ->
-            env.vars[a[0].token] = eval(env, a[1])
-                    },
+        "define" to { env, a -> env[a[0].token] = eval(env, a[1]) },
         "lambda" to { env, a -> lambda(env, a) } // ::lambda,
     )
 
     /** Add these words to the top-level environment. */
     init {
-        val functions = mutableMapOf<String, Func>(
-            "+" to { a -> (a[0] as Double) + (a[1] as Double) },
-            "*" to { a -> (a[0] as Double) * (a[1] as Double) },
-            "-" to { a -> (a[0] as Double) - (a[1] as Double) },
-            "/" to { a -> (a[0] as Double) / (a[1] as Double) },
-            "not" to { a -> !(a[0] as Boolean) },
-            "=" to { a -> a[0] == a[1] },
-        )
-        functions.forEach { (k, v) -> environment.vars[k] = v }
+        with(environment) {
+            addFunc("+") { a -> (a[0] as Double) + (a[1] as Double) }
+            addFunc("*") { a -> (a[0] as Double) * (a[1] as Double) }
+            addFunc("-") { a -> (a[0] as Double) - (a[1] as Double) }
+            addFunc("/") { a -> (a[0] as Double) / (a[1] as Double) }
+            addFunc("not") { a -> !(a[0] as Boolean) }
+            addFunc("=") { a -> a[0] == a[1] }
+        }
     }
 
     /** Creates a lambda function. */
@@ -49,8 +46,7 @@ class Interpreter(val environment: Environment = Environment(null)) {
         return { args ->
             // Create an environment and add the lambda variables to it.
             val env = Environment(parent)
-            for (i in 0..<names.children.size)
-                env.vars[names.children[i].token] = args[i]
+            for (i in 0..<names.children.size) env[names[i].token] = args[i]
             // When a lambda is called, it evaluates itself: here, in fact
             eval(env, body)
         }
@@ -64,7 +60,7 @@ class Interpreter(val environment: Environment = Environment(null)) {
         if (ast.isAtom) return evalAtom(env, ast)
 
         // Special forms handle their own evaluation (so they can do special
-        // things, like short-circuit for and/or, etc)
+        // things, like short-circuit for and/or, etc.)
         val specialForm = specialForms[ast.head.token]
         if (specialForm != null) return specialForm(env, ast.tail)
 
@@ -85,13 +81,13 @@ class Interpreter(val environment: Environment = Environment(null)) {
     /** Evaluate, in order: a-number? a-bool? a-function? */
     fun evalAtom(env: Environment, ast: AST): Any? {
         return try {
-            ast.numValue
+            ast.asDouble
         } catch (_: NumberFormatException) {
             try {
-                ast.boolValue
+                ast.asBoolean
             } catch (_: IllegalArgumentException) {
                 // Check for the name in our environ (which recurses up)
-                env.at(ast.token)
+                env[ast.token]
             }
         }
     }

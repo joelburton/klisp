@@ -11,12 +11,13 @@ package kf
 
 class AST(val token: String, val children: MutableList<AST> = mutableListOf()) {
     override fun toString() = if (isAtom) token else children.toString()
+    operator fun get(index: Int) = children[index]
 
     /** Get token-as-double. Raise error if called on a non-number token. */
-    val numValue get() = token.toDouble()
+    val asDouble get() = token.toDouble()
 
     /** Get token-as-bool. Raise error if called on a non-boolean token. */
-    val boolValue
+    val asBoolean
         get() =
             if (token == "true" || token == "false") token.toBoolean()
             else throw IllegalArgumentException("Not boolean: $token")

@@ -9,10 +9,9 @@ package kf
  * Each environment points to its parent; the top has a null parent.
  */
 
-class Environment(val parent: Environment? = null) {
-    /** The variables available in this environment. */
-    val vars: MutableMap<String, Any?> = HashMap()
-
+class Environment(val parent: Environment? = null) : HashMap<String, Any?>() {
     /** Look up a name: start here, then recursively up through parents. */
-    fun at(key: String): Any? = vars[key] ?: parent?.at(key)
+    override operator fun get(key: String): Any? =
+        super.get(key) ?: parent?.get(key)
+    fun addFunc(name: String, func: Func) = put(name, func)
 }
