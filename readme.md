@@ -12,7 +12,7 @@ It's small and, since it's written in Kotlin, easy to read and hack on.
 java -jar build/libs/klisp-1.0-all.jar
 ```
 
-(I'm currently building it for JVMs for Java 21+, but I suspect you could
+(I'm currently building it for JVMs for Java 17+, but I suspect you could
 lower that in the `build.gradle.kts` and everything will be fine)
 
 Using gradle to run terminal apps doesn't work well, since it tries to control
