@@ -13,7 +13,7 @@ typealias SpecialForm = (env: Environ, a: List<Ast>) -> Any?
 class Interpreter(val environ: Environ = Environ(null)) {
 
     /** The top-level eval: this is what outside callers use. */
-    fun eval(ast: Ast) = eval(environ, ast).toString()
+    fun eval(ast: Ast) = eval(environ, ast)
 
     /** Special forms are not evaluated; the author of them must evaluate them.
      *

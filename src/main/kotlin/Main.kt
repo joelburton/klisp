@@ -1,16 +1,20 @@
 package com.joelburton.klisp
 
+import org.jline.terminal.TerminalBuilder
 import org.jline.reader.*
 import org.jline.reader.LineReader.Option
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.DefaultParser.Bracket
+import org.jline.terminal.Terminal
+import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStringBuilder
 import org.jline.utils.AttributedStyle
+import org.jline.utils.AttributedStyle.*
 import org.jline.widget.AutosuggestionWidgets
-
 
 val parser = Parser()
 val interp = Interpreter()
+val terminal: Terminal = TerminalBuilder.builder().dumb(true).build()
 
 
 /** JLine completer that uses the Lisp environment to complete. */
@@ -31,24 +35,22 @@ private class LispCompleter(val interp: Interpreter) : Completer {
     }
 }
 
-/** Print err msg to console in red. */
-fun printErr(msg: String) {
-    val out = AttributedStringBuilder()
-        .style(AttributedStyle.DEFAULT.bold().foreground(AttributedStyle.RED))
-        .append("ERROR: $msg")
-        .style(AttributedStyle.DEFAULT)
-        .toAnsi()
-    println(out)
+fun kPrint(s: String, style: AttributedStyle = DEFAULT) {
+    if (terminal.type == "dumb") {
+        print(s)
+    } else {
+        val out = AttributedStringBuilder()
+            .style(style)
+            .append(s)
+            .style(DEFAULT)
+            .toAnsi(terminal)
+        terminal.writer().print(out)
+    }
 }
 
-/** Print evaluation result in bold. */
-private fun printResult(result: String?) {
-    val out = AttributedStringBuilder()
-        .style(AttributedStyle.DEFAULT.bold())
-        .append(result)
-        .style(AttributedStyle.DEFAULT)
-    println(out.toAnsi())
-}
+fun kPrintLn(s: String, style: AttributedStyle = DEFAULT) =
+    kPrint("$s\n", style)
+
 
 /** Set up JLine reader:
  *
@@ -62,16 +64,20 @@ private fun printResult(result: String?) {
 private fun setupLineReader(): Pair<String, LineReader> {
     val parser = DefaultParser()
     parser.setEofOnUnclosedBracket(Bracket.ROUND)
+    parser.lineCommentDelims(arrayOf(";"))
+
     val prompt = AttributedStringBuilder()
-        .style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN))
+        .style(DEFAULT.foreground(GREEN))
         .append("klisp> ")
-        .style(AttributedStyle.DEFAULT)
-        .toAnsi()
+        .style(DEFAULT)
+        .toAnsi(terminal)
+
     val prompt2 = AttributedStringBuilder()
-        .style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN))
+        .style(DEFAULT.foreground(GREEN))
         .append("...... ")
-        .style(AttributedStyle.DEFAULT)
-        .toAnsi()
+        .style(DEFAULT)
+        .toAnsi(terminal)
+
     val reader = LineReaderBuilder
         .builder()
         .parser(parser)
@@ -79,44 +85,63 @@ private fun setupLineReader(): Pair<String, LineReader> {
         .variable(LineReader.SECONDARY_PROMPT_PATTERN, prompt2)
         .variable(LineReader.INDENTATION, 2)
         .option(Option.INSERT_BRACKET, true)
+        .terminal(terminal)
         .build()
+
     val autosuggestionWidgets = AutosuggestionWidgets(reader)
     autosuggestionWidgets.enable()
+
     return Pair(prompt, reader)
 }
 
-/** Display welcome banner. */
-private fun displayBanner() {
-    val banner = AttributedStringBuilder()
-        .style(AttributedStyle.DEFAULT.bold().foreground(AttributedStyle.GREEN))
-        .append("\nKLisp!\n")
-        .style(AttributedStyle.DEFAULT)
-        .toAnsi()
-    println(banner)
+
+fun main() {
+    if (terminal.type == "dumb") noninteractive()
+    else interactive()
+}
+
+fun noninteractive() {
+    while (true) {
+        try {
+            val line = readLine() ?: break
+            if (line.trim().isEmpty()) continue
+            val result = interp.eval(parser(line))
+            if (result is Unit) continue
+            println("=> $result")
+        } catch (e: Exception) {
+            println("ERROR ${e.message ?: "Unknown error"}")
+        }
+    }
 }
 
 /** REPL loop. */
 
-fun main() {
-    displayBanner()
-    println("Special forms: ${interp.specialForms.keys.joinToString(" ")}")
-    println("Words: ${interp.environ.keys.joinToString(" ")}\n")
+fun interactive() {
+    kPrintLn("Welcome to Klisp!\n", style = DEFAULT.foreground(GREEN))
+    kPrint("Special forms: ", style = DEFAULT.foreground(YELLOW))
+    kPrintLn(interp.specialForms.keys.joinToString(" "))
+    kPrint("Words: ", style = DEFAULT.foreground(YELLOW))
+    kPrintLn("${interp.environ.keys.joinToString(" ")}\n")
 
     val (prompt, reader) = setupLineReader()
 
     while (true) {
         try {
             val line = reader.readLine(prompt)
+            if (line.trim().isEmpty()) continue
             val result = interp.eval(parser(line))
-            printResult(result)
+            if (result is Unit) continue
+            kPrintLn("⇒ $result", style = DEFAULT.bold())
         } catch (_: EndOfFileException) {
             return
         } catch (e: Exception) {
-            printErr(e.message ?: "Unknown error")
+            kPrintLn(
+                "ERROR ${e.message ?: "Unknown error"}",
+                style = DEFAULT.foreground(RED)
+            )
         }
     }
 }
-
 
 
 @Suppress("unused")
