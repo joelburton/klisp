@@ -1,40 +1,23 @@
 package com.joelburton.klisp
 
-import org.jline.terminal.TerminalBuilder
 import org.jline.reader.*
 import org.jline.reader.LineReader.Option
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.DefaultParser.Bracket
 import org.jline.terminal.Terminal
-import org.jline.utils.AttributedString
+import org.jline.terminal.TerminalBuilder
 import org.jline.utils.AttributedStringBuilder
 import org.jline.utils.AttributedStyle
 import org.jline.utils.AttributedStyle.*
 import org.jline.widget.AutosuggestionWidgets
+
 
 val parser = Parser()
 val interp = Interpreter()
 val terminal: Terminal = TerminalBuilder.builder().dumb(true).build()
 
 
-/** JLine completer that uses the Lisp environment to complete. */
-private class LispCompleter(val interp: Interpreter) : Completer {
-    override fun complete(
-        reader: LineReader,
-        line: ParsedLine,
-        candidates: MutableList<Candidate>
-    ) {
-        for (fn in interp.specialForms.keys) {
-            candidates.add(Candidate(fn))
-            candidates.add(Candidate("($fn"))
-        }
-        for (fn in interp.environ.keys) {
-            candidates.add(Candidate(fn))
-            candidates.add(Candidate("($fn"))
-        }
-    }
-}
-
+/** Print to either interactive console or dumb terminal/stdout */
 fun kPrint(s: String, style: AttributedStyle = DEFAULT) {
     if (terminal.type == "dumb") {
         print(s)
@@ -48,9 +31,9 @@ fun kPrint(s: String, style: AttributedStyle = DEFAULT) {
     }
 }
 
-fun kPrintLn(s: String, style: AttributedStyle = DEFAULT) =
+/** Print line to either interactive console or dumb terminal/stdout */
+fun kPrintln(s: String, style: AttributedStyle = DEFAULT) =
     kPrint("$s\n", style)
-
 
 /** Set up JLine reader:
  *
@@ -86,6 +69,7 @@ private fun setupLineReader(): Pair<String, LineReader> {
         .variable(LineReader.INDENTATION, 2)
         .option(Option.INSERT_BRACKET, true)
         .terminal(terminal)
+        .highlighter(LispHighter())
         .build()
 
     val autosuggestionWidgets = AutosuggestionWidgets(reader)
@@ -117,11 +101,11 @@ fun noninteractive() {
 /** REPL loop. */
 
 fun interactive() {
-    kPrintLn("Welcome to Klisp!\n", style = DEFAULT.foreground(GREEN))
+    kPrintln("Welcome to Klisp!\n", style = DEFAULT.foreground(GREEN))
     kPrint("Special forms: ", style = DEFAULT.foreground(YELLOW))
-    kPrintLn(interp.specialForms.keys.joinToString(" "))
+    kPrintln(interp.specialForms.keys.joinToString(" "))
     kPrint("Words: ", style = DEFAULT.foreground(YELLOW))
-    kPrintLn("${interp.environ.keys.joinToString(" ")}\n")
+    kPrintln("${interp.environ.keys.joinToString(" ")}\n")
 
     val (prompt, reader) = setupLineReader()
 
@@ -131,13 +115,12 @@ fun interactive() {
             if (line.trim().isEmpty()) continue
             val result = interp.eval(parser(line))
             if (result is Unit) continue
-            kPrintLn("⇒ $result", style = DEFAULT.bold())
+            kPrintln("⇒ $result", style = DEFAULT.italic())
         } catch (_: EndOfFileException) {
             return
         } catch (e: Exception) {
-            kPrintLn(
-                "ERROR ${e.message ?: "Unknown error"}",
-                style = DEFAULT.foreground(RED)
+            kPrintln(
+                "ERROR: ${e.message ?: e}", style = DEFAULT.foreground(RED)
             )
         }
     }

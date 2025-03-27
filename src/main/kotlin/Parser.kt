@@ -20,7 +20,12 @@ class Parser {
         // than one part, like `(a b c) (d e f)` isn't a valid s-exp; so if
         // there is anything else other than the head, this isn't an expression
         // and throw an error.
-        val rest = peek(reader)
+        var rest = peek(reader)
+        if (rest == ";") {
+            // there's a trailing comment; ignore this...
+            while(peek(reader) != "\n" && peek(reader) != "") reader.read()
+            rest = peek(reader)
+        }
         if (rest.isNotEmpty()) throw ParseError("Unexpected input: $rest")
 
         return ast
@@ -35,7 +40,16 @@ class Parser {
      */
 
     private fun parse(reader: PushbackReader): Ast {
-        val token = nextToken(reader)
+        var token = nextToken(reader)
+
+        if (token == ";") {
+            while (true) {
+                val chr = reader.read()
+                if (chr == END_OF_STREAM) return Ast("")
+                if (chr == '\n'.code) break
+            }
+            token = nextToken(reader)
+        }
 
         // When we hit an open-paren, we parse that whole expression through to
         // the ending close-paren. So, having this be called on a close paren
