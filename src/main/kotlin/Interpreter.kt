@@ -1,9 +1,7 @@
 package com.joelburton.klisp
 
-import com.joelburton.klisp.Interpreter.Environ
-
 typealias LispFunc = (a: List<Any>) -> Any?
-typealias SpecialForm = (env: Environ, a: List<AST>) -> Any?
+typealias SpecialForm = (env: Environ, a: List<Ast>) -> Any?
 
 /** The interpreter for the Lisp system.
  *
@@ -12,30 +10,17 @@ typealias SpecialForm = (env: Environ, a: List<AST>) -> Any?
  * expression.
  */
 
-class Interpreter(private val environ: Environ = Environ(null)) {
+class Interpreter(val environ: Environ = Environ(null)) {
 
-    /** The environment is the list of definitions available to a function.
-     *
-     * The are a bunch of standard things (like `+`, `-`, and other built-in
-     * definitions) that will be in here, but for a lambda, this will also have
-     * it's variables available. And, of course, this is recursive.
-     *
-     * Each environment points to its parent; the top has a null parent.
-     */
-    class Environ(val parent: Environ? = null) : HashMap<String, Any?>() {
-        /** Look up a name: start here, then recursively up through parents. */
-        override operator fun get(key: String): Any? =
-            super[key] ?: parent?.get(key)
-
-        internal fun addFunc(name: String, func: LispFunc) = put(name, func)
-    }
+    /** The top-level eval: this is what outside callers use. */
+    fun eval(ast: Ast) = eval(environ, ast).toString()
 
     /** Special forms are not evaluated; the author of them must evaluate them.
      *
      * This is what allows short-circuiting in logical expressions and is
      * what lambda and definitions use.
      */
-    private val specialForms = mutableMapOf<String, SpecialForm>(
+    val specialForms = mutableMapOf<String, SpecialForm>(
         "and" to { env, a -> a.all { eval(env, it) as Boolean } as Any },
         "or" to { env, a -> a.any { eval(env, it) as Boolean } as Any },
         "if" to { env, a ->
@@ -59,9 +44,9 @@ class Interpreter(private val environ: Environ = Environ(null)) {
     }
 
     /** Creates a lambda function. */
-    private fun createLambda(parent: Environ, lambda: List<AST>): LispFunc {
-        val names: AST = lambda[0]
-        val body: AST = lambda[1]
+    private fun createLambda(parent: Environ, lambda: List<Ast>): LispFunc {
+        val names: Ast = lambda[0]
+        val body: Ast = lambda[1]
         return { a ->
             // Create an environment and add the lambda variables to it.
             val env = Environ(parent)
@@ -71,11 +56,8 @@ class Interpreter(private val environ: Environ = Environ(null)) {
         }
     }
 
-    /** The top-level eval: this is what outside callers use. */
-    fun eval(ast: AST) = eval(environ, ast)
-
     /** The recursive evaluator at the core of the system. */
-    private fun eval(env: Environ, ast: AST): Any? {
+    private fun eval(env: Environ, ast: Ast): Any? {
         if (ast.isAtom) return evalAtom(env, ast)
 
         // Special forms handle their own evaluation (so they can do special
@@ -96,6 +78,6 @@ class Interpreter(private val environ: Environ = Environ(null)) {
     }
 
     /** Evaluate, in order: a-number? a-bool? a-function? */
-    private fun evalAtom(env: Environ, ast: AST): Any? =
+    private fun evalAtom(env: Environ, ast: Ast): Any? =
         ast.double ?: ast.boolean ?: env[ast.token]
 }

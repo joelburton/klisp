@@ -9,7 +9,9 @@ package com.joelburton.klisp
  *
  */
 
-class AST(val token: String, val children: MutableList<AST> = mutableListOf()) {
+data class Ast(
+    val token: String, val children: MutableList<Ast> = mutableListOf()
+) {
     override fun toString() = if (isAtom) token else children.toString()
     operator fun get(index: Int) = children[index]
 
@@ -27,4 +29,14 @@ class AST(val token: String, val children: MutableList<AST> = mutableListOf()) {
 
     /** The Lisp CDR idea: the "tail" is a list of all subsequent children. */
     val tail get() = children.subList(1, children.size)
+
+    /** For debugging/learning: returns level-indented representation of AST
+     *
+     * Recursively collections children and returns final string.
+     * */
+    fun dump(indent: Int = 0): String =
+        buildString {
+            appendLine("${" ".repeat(indent)}'${token}'")
+            children.forEach { c -> append(c.dump(indent + 2)) }
+        }
 }

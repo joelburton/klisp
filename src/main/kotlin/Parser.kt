@@ -3,13 +3,14 @@ package com.joelburton.klisp
 import java.io.PushbackReader
 import java.io.StringReader
 
-private class ParseError(message: String) : Exception(message)
 private const val END_OF_STREAM = -1
 
 /** A basic recursive descendant parser for LISP. */
 
 class Parser {
-    operator fun invoke(input: String): AST {
+    class ParseError(message: String) : Exception(message)
+
+    operator fun invoke(input: String): Ast {
         val reader = PushbackReader(StringReader(input))
 
         // Recursively parse the string and create the AST
@@ -33,7 +34,7 @@ class Parser {
      *
      */
 
-    private fun parse(reader: PushbackReader): AST {
+    private fun parse(reader: PushbackReader): Ast {
         val token = nextToken(reader)
 
         // When we hit an open-paren, we parse that whole expression through to
@@ -44,19 +45,19 @@ class Parser {
         //  end without that is a parsing error, like `( 1 2`
 
         if (token == ")" || token.isEmpty()) {
-            throw ParseError("Unexpected parentheses: $token")
+            throw ParseError("Parsing error: $token")
         }
 
         // If we do find an open paren, parse everything inside of it
         // recursively, then skip its closing paren
         return if (token == "(") {
-            val list = AST(token)
-            while (peek(reader) != ")") list.children.add(parse(reader))
+            val ast = Ast(token)
+            while (peek(reader) != ")") ast.children.add(parse(reader))
             nextToken(reader) // skip )
-            list
+            ast
         } else {
             // Just an ordinary token, like `1` or `foo`
-            AST(token)
+            Ast(token)
         }
     }
 
