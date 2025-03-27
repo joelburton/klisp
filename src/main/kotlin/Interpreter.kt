@@ -2,6 +2,7 @@ package com.joelburton.klisp
 
 typealias LispFunc = (a: List<Any>) -> Any?
 typealias SpecialForm = (env: Environ, a: List<Ast>) -> Any?
+class Unknown(name: String) : Exception("Unknown: $name")
 
 /** The interpreter for the Lisp system.
  *
@@ -34,12 +35,17 @@ class Interpreter(val environ: Environ = Environ(null)) {
     /** Add these words to the top-level environment. */
     init {
         with(environ) {
-            addFunc("+") { a -> (a[0] as Double) + (a[1] as Double) }
-            addFunc("-") { a -> (a[0] as Double) - (a[1] as Double) }
-            addFunc("*") { a -> (a[0] as Double) * (a[1] as Double) }
-            addFunc("/") { a -> (a[0] as Double) / (a[1] as Double) }
-            addFunc("=") { a -> a[0] == a[1] }
-            addFunc("not") { a -> !(a[0] as Boolean) }
+            fn("+") { a -> a.reduce { a, b -> (a as Double + b as Double) } }
+            fn("-") { a -> a.reduce { a, b -> (a as Double - b as Double) } }
+            fn("*") { a -> a.reduce { a, b -> (a as Double * b as Double) } }
+            fn("/") { a -> a.reduce { a, b -> (a as Double / b as Double) } }
+            fn("=") { a -> a.all { it == a[0] } }
+            fn("equal?") { a -> a.all { it == a[0] } }
+            fn("<") { a -> (a[0] as Double) < (a[1] as Double) }
+            fn("<=") { a -> (a[0] as Double) <= (a[1] as Double) }
+            fn(">") { a -> (a[0] as Double) > (a[1] as Double) }
+            fn(">=") { a -> (a[0] as Double) >= (a[1] as Double) }
+            fn("not") { a -> !(a[0] as Boolean) }
         }
     }
 
@@ -71,13 +77,12 @@ class Interpreter(val environ: Environ = Environ(null)) {
         // possible for Kotlin to know that the result of that evaluation is
         // a function --- so it needs to be coerced into that, and the compiler
         // needs to be lovingly reassured that this is ok.
-        val func = eval(env, ast.head)
-            ?: throw Exception("Unknown function: ${ast.head.token}")
+        val func = eval(env, ast.head) ?: throw Unknown(ast.head.token)
         @Suppress("UNCHECKED_CAST")
         return (func as LispFunc).invoke(ast.tail.map { eval(env, it) as Any })
     }
 
     /** Evaluate, in order: a-number? a-bool? a-function? */
     private fun evalAtom(env: Environ, ast: Ast): Any? =
-        ast.double ?: ast.boolean ?: env[ast.token]
+        ast.double ?: ast.boolean ?: env[ast.token] ?: throw Unknown(ast.token)
 }

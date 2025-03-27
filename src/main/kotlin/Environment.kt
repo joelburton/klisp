@@ -8,11 +8,10 @@ package com.joelburton.klisp
  *
  * Each environment points to its parent; the top has a null parent.
  */
-class Environ(val parent: Environ? = null) : HashMap<String, Any?>() {
+class Environ(val parent: Environ? = null) : LinkedHashMap<String, Any?>() {
     /** Look up a name: start here, then recursively up through parents. */
     override operator fun get(key: String): Any? =
         super[key] ?: parent?.get(key)
 
-    internal fun addFunc(name: String, func: LispFunc) = put(name, func)
+    internal fun fn(name: String, func: LispFunc) = put(name, func)
 }
-
